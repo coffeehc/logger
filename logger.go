@@ -86,6 +86,7 @@ func init() {
 	}
 	evnRootPathLen = len(rootPath)
 	AddStdOutFilter("ROOT", LOGGER_LEVEL_DEBUG, "/", "")
+	isAddFilter = false
 	Info("logger框架初始化完成")
 }
 
@@ -93,14 +94,14 @@ func AddStdOutFilter(name string, level byte, path string, timeFormat string) {
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_NANOSECOND
 	}
-	if !isAddFilter {
-		delete(filters, "ROOT")
-	}
 	AddFileter(name, level, path, timeFormat, os.Stdout)
-	isAddFilter = true
 }
 
 func AddFileter(name string, level byte, path string, timeFormat string, out io.Writer) {
+	if !isAddFilter {
+		delete(filters, "ROOT")
+	}
+	isAddFilter = true
 	defer func() {
 		if x := recover(); x != nil {
 			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x))
