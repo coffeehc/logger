@@ -3,13 +3,13 @@ package logger
 
 import (
 	"fmt"
+	"github.com/coffeehc/utils"
 	"io"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
-	"utils"
 )
 
 const (
@@ -74,20 +74,33 @@ func (this *logFilter) run() {
 	}
 }
 
-var evnRootPathLen int
-var isAddFilter bool = false
-var filters map[string]*logFilter
+var (
+	isAddFilter    bool = false
+	filters        map[string]*logFilter
+	isInit         bool = false
+	evnRootPathLen int
+)
 
-func init() {
-	filters = make(map[string]*logFilter)
-	rootPath, err := os.Getwd()
-	if err != nil {
-		fmt.Println("初始化日志出现一个错误:%v", err)
-	}
-	evnRootPathLen = len(rootPath)
+func StartDevModel() {
+	Init()
 	AddStdOutFilter("ROOT", LOGGER_LEVEL_DEBUG, "/", "")
+}
+
+func Init() {
+	if isInit {
+		Info("日志已经初始化,不需要再次初始化")
+		return
+	}
+	_, fulleFilename, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("获取Logger根路径出错")
+	}
+	evnRootPathLen = strings.Index(fulleFilename, "/src/") + 4
+	filters = make(map[string]*logFilter)
+	//AddStdOutFilter("ROOT", LOGGER_LEVEL_DEBUG, "/", "")
 	isAddFilter = false
 	Info("logger框架初始化完成")
+	isInit = true
 }
 
 func AddStdOutFilter(name string, level byte, path string, timeFormat string) {
@@ -127,16 +140,13 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	filter.cache = make(chan string, 200)
 	filters[name] = filter
 	go filter.run()
-
+	Debugf("添加了Log Filter:%s,%v,%s", name, level, path)
 }
 func output(level byte, content string) {
 	_, file, line, ok := runtime.Caller(2)
 	var lineInfo string = "-:0"
 	if ok {
 		file = utils.SubString(file, evnRootPathLen, 1000)
-		if !strings.HasPrefix(file, "/") {
-			file = "/" + file
-		}
 		lineInfo = file + ":" + strconv.Itoa(line)
 	}
 	content = fmt.Sprintf("\t%s\t%s\t%s\n", getLevelStr(level), lineInfo, content)
