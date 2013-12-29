@@ -3,7 +3,6 @@ package logger
 
 import (
 	"fmt"
-	"github.com/coffeehc/utils"
 	"io"
 	"os"
 	"runtime"
@@ -30,22 +29,22 @@ const (
 func getLevelStr(level byte) string {
 	switch level {
 	case LOGGER_LEVEL_ERROR:
-		return "error"
+		return "ERROR"
 	case LOGGER_LEVEL_WARN:
-		return "warn"
+		return "WARN"
 	case LOGGER_LEVEL_INFO:
-		return "info"
+		return "INFO"
 	case LOGGER_LEVEL_DEBUG:
-		return "debug"
+		return "DEBUG"
 	case LOGGER_LEVEL_TRACE:
-		return "trace"
+		return "TRACE"
 	default:
 		return "--"
 	}
 }
 
 type Flusher interface {
-	Flush()
+	Flush() error
 }
 type logFilter struct {
 	level      byte   //拦截级别
@@ -75,32 +74,14 @@ func (this *logFilter) run() {
 }
 
 var (
-	isAddFilter    bool = false
 	filters        map[string]*logFilter
-	isInit         bool = false
 	evnRootPathLen int
 )
 
-func StartDevModel() {
-	Init()
-	AddStdOutFilter("ROOT", LOGGER_LEVEL_DEBUG, "/", "")
-}
-
-func Init() {
-	if isInit {
-		Info("日志已经初始化,不需要再次初始化")
-		return
-	}
-	_, fulleFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("获取Logger根路径出错")
-	}
-	evnRootPathLen = strings.Index(fulleFilename, "/src/") + 4
+func init() {
 	filters = make(map[string]*logFilter)
-	//AddStdOutFilter("ROOT", LOGGER_LEVEL_DEBUG, "/", "")
-	isAddFilter = false
+	AddStdOutFilter("_ROOT", LOGGER_LEVEL_INFO, "/", "")
 	Info("logger框架初始化完成")
-	isInit = true
 }
 
 func AddStdOutFilter(name string, level byte, path string, timeFormat string) {
@@ -111,10 +92,7 @@ func AddStdOutFilter(name string, level byte, path string, timeFormat string) {
 }
 
 func AddFileter(name string, level byte, path string, timeFormat string, out io.Writer) {
-	if !isAddFilter {
-		delete(filters, "ROOT")
-	}
-	isAddFilter = true
+	delete(filters, "_ROOT")
 	defer func() {
 		if x := recover(); x != nil {
 			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x))
@@ -140,18 +118,18 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	filter.cache = make(chan string, 200)
 	filters[name] = filter
 	go filter.run()
-	Debugf("添加了Log Filter:%s,%v,%s", name, level, path)
+	Debugf("添加了Log Filter:name=%s,level=%s,path=%s", name, getLevelStr(level), path)
 }
 func output(level byte, content string) {
 	_, file, line, ok := runtime.Caller(2)
 	var lineInfo string = "-:0"
 	if ok {
-		file = utils.SubString(file, evnRootPathLen, 1000)
-		lineInfo = file + ":" + strconv.Itoa(line)
+		index := strings.Index(file, "/src/") + 4
+		lineInfo = file[index:] + ":" + strconv.Itoa(line)
 	}
 	content = fmt.Sprintf("\t%s\t%s\t%s\n", getLevelStr(level), lineInfo, content)
 	for _, filter := range filters {
-		if filter != nil && filter.canSave(level, file) {
+		if filter != nil && filter.canSave(level, lineInfo) {
 			filter.cache <- time.Now().Format(filter.timeFormat) + content
 		}
 	}

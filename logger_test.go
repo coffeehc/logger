@@ -2,19 +2,16 @@
 package logger
 
 import (
-	"fmt"
-	"path"
-	"runtime"
 	"testing"
+	"time"
 )
 
 func TestBaseLog(t *testing.T) {
-	//Debugf("Test")
-	_, fulleFilename, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("获取Logger根路径出错")
-	}
-	fmt.Printf("fulleFilename :%s\n", fulleFilename)
-	rootPath := path.Base(fulleFilename)
-	fmt.Printf("rootPath :%s\n", rootPath)
+	//AddFileFilterForTime("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log", time.Second*10, 10)
+	//AddFileFilterForDefualt("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log")
+	//AddFileFilterForSize("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log", 3*1024, 10)
+	//for {
+	//	Debugf("test", time.Now())
+	//	time.Sleep(time.Millisecond * 3)
+	//}
 }
