@@ -80,7 +80,7 @@ var (
 
 func init() {
 	filters = make(map[string]*logFilter)
-	AddStdOutFilter("_ROOT", LOGGER_LEVEL_INFO, "/", "")
+	AddStdOutFilter("_ROOT", LOGGER_LEVEL_DEBUG, "/", "")
 	Info("logger框架初始化完成")
 }
 
