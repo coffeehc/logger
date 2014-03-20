@@ -80,8 +80,12 @@ var (
 
 func init() {
 	filters = make(map[string]*logFilter)
-	AddStdOutFilter("_ROOT", LOGGER_LEVEL_DEBUG, "/", "")
+	AddStdOutFilter("_ROOT", LOGGER_LEVEL_ERROR, "/", "")
 	Info("logger框架初始化完成")
+}
+
+func StartDevModul(level byte) {
+	AddStdOutFilter("_ROOT", level, "/", "")
 }
 
 func AddStdOutFilter(name string, level byte, path string, timeFormat string) {
@@ -98,14 +102,17 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x))
 		}
 	}()
-	if path == "" {
+	if name == "" {
 		panic("拦截器名称不能为空")
+	}
+	if path == "" {
+		panic("拦截器拦截路径不能为空")
 	}
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
 	}
 	if out == nil {
-		panic("拦截器名称不能为空")
+		panic("拦截器输出不能为空")
 	}
 	if filters[name] != nil {
 		panic(fmt.Sprintf("已经定义了一个%s的日志拦截器", name))

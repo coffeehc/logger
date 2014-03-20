@@ -162,6 +162,7 @@ func AddFileFilterForSize(name string, level byte, path string, logPath string, 
 func (this *FileLogWriter) Rotate() {
 	if this.wr == nil {
 		i := strings.LastIndex(this.config.StorePath, "/")
+		//TODO change path.Dir
 		os.MkdirAll(this.config.StorePath[:i], 0666)
 		_, err := os.Stat(this.config.StorePath)
 		if err == nil {
@@ -219,7 +220,6 @@ func clearLog(logPath string, rotateSize int) {
 		for i := 1; i < deleteFileSize; i++ {
 			os.Remove(files[i])
 		}
-
 	}
 }
 
