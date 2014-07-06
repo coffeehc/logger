@@ -80,7 +80,7 @@ var (
 
 func init() {
 	filters = make(map[string]*logFilter)
-	AddStdOutFilter("_ROOT", LOGGER_LEVEL_ERROR, "/", "")
+	AddStdOutFilter("_ROOT", LOGGER_LEVEL_INFO, "/", "")
 	Info("logger框架初始化完成")
 }
 
@@ -105,6 +105,10 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	if name == "" {
 		panic("拦截器名称不能为空")
 	}
+	if filters[name] != nil {
+		Warn("已经定义了一个%s的日志拦截器,不能再次定义", name)
+		return
+	}
 	if path == "" {
 		panic("拦截器拦截路径不能为空")
 	}
@@ -114,9 +118,6 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	if out == nil {
 		panic("拦截器输出不能为空")
 	}
-	if filters[name] != nil {
-		panic(fmt.Sprintf("已经定义了一个%s的日志拦截器", name))
-	}
 	filter := new(logFilter)
 	filter.level = level
 	filter.path = path
@@ -125,7 +126,6 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	filter.cache = make(chan string, 200)
 	filters[name] = filter
 	go filter.run()
-	Debugf("添加了Log Filter:name=%s,level=%s,path=%s", name, getLevelStr(level), path)
 }
 func output(level byte, content string) {
 	_, file, line, ok := runtime.Caller(2)
@@ -142,42 +142,42 @@ func output(level byte, content string) {
 	}
 }
 
-func Trace(v ...interface{}) {
-	output(LOGGER_LEVEL_TRACE, fmt.Sprint(v...))
-}
+//func Trace(v ...interface{}) {
+//	output(LOGGER_LEVEL_TRACE, fmt.Sprint(v...))
+//}
 
-func Tracef(format string, v ...interface{}) {
+func Trace(format string, v ...interface{}) {
 	output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...))
 }
 
-func Debug(v ...interface{}) {
-	output(LOGGER_LEVEL_DEBUG, fmt.Sprint(v...))
-}
+//func Debug(v ...interface{}) {
+//	output(LOGGER_LEVEL_DEBUG, fmt.Sprint(v...))
+//}
 
-func Debugf(format string, v ...interface{}) {
+func Debug(format string, v ...interface{}) {
 	output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...))
 }
 
-func Info(v ...interface{}) {
-	output(LOGGER_LEVEL_INFO, fmt.Sprint(v...))
-}
+//func Info(v ...interface{}) {
+//	output(LOGGER_LEVEL_INFO, fmt.Sprint(v...))
+//}
 
-func Infof(format string, v ...interface{}) {
+func Info(format string, v ...interface{}) {
 	output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...))
 }
 
-func Warn(v ...interface{}) {
-	output(LOGGER_LEVEL_WARN, fmt.Sprint(v...))
-}
+//func Warn(v ...interface{}) {
+//	output(LOGGER_LEVEL_WARN, fmt.Sprint(v...))
+//}
 
-func Warnf(format string, v ...interface{}) {
+func Warn(format string, v ...interface{}) {
 	output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...))
 }
 
-func Error(v ...interface{}) {
-	output(LOGGER_LEVEL_ERROR, fmt.Sprint(v...))
-}
+//func Error(v ...interface{}) {
+//	output(LOGGER_LEVEL_ERROR, fmt.Sprint(v...))
+//}
 
-func Errorf(format string, v ...interface{}) {
+func Error(format string, v ...interface{}) {
 	output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...))
 }

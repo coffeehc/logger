@@ -74,7 +74,7 @@ func LoadLoggerConfig(config *goconfig.ConfigFile) {
 				childConfig.name = child
 				addLogger(childConfig)
 			} else {
-				Warnf("没有找到%s的日志配置", childSelect)
+				Warn("没有找到%s的日志配置", childSelect)
 			}
 		}
 	}
