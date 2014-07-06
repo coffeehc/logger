@@ -161,28 +161,25 @@ func AddFileFilterForSize(name string, level byte, path string, logPath string, 
 
 func (this *FileLogWriter) Rotate() {
 	if this.wr == nil {
-		i := strings.LastIndex(this.config.StorePath, "/")
-		//TODO change path.Dir
-		os.MkdirAll(this.config.StorePath[:i], 0666)
-		_, err := os.Stat(this.config.StorePath)
-		if err == nil {
+		os.MkdirAll(filepath.Dir(this.config.StorePath), 0666)
+		fileInfo, err := os.Stat(this.config.StorePath)
+		if err == nil && fileInfo.Size() != 0 {
 			bakName := this.config.StorePath + "." + strconv.FormatInt(time.Now().Unix(), 10)
 			err := os.Rename(this.config.StorePath, bakName)
 			if err != nil {
 				panic(fmt.Sprintf("备份老的日志文件失败:%s", err))
 			}
 		}
-		file, err := os.Create(this.config.StorePath)
+		this.wr, err = os.OpenFile(this.config.StorePath, os.O_CREATE|os.O_RDWR, 0666)
 		if err != nil {
-			panic(fmt.Sprintf("创建日志文件失败:%s", err))
+			panic(fmt.Sprintf("打开日志文件失败,%s", err))
 		}
-		this.wr = file
 	} else {
 		this.wr.Close()
 		bakName := this.config.StorePath + "." + strconv.FormatInt(time.Now().Unix(), 10)
 		err := os.Rename(this.config.StorePath, bakName)
 		if err != nil {
-			Errorf(fmt.Sprintf("循环备份老的日志文件失败:%s", err))
+			Error(fmt.Sprintf("循环备份老的日志文件失败:%s", err))
 		}
 		file, err := os.Create(this.config.StorePath)
 		if err != nil {
@@ -204,7 +201,6 @@ func clearLog(logPath string, rotateSize int) {
 		if f == nil {
 			return err
 		}
-
 		if f.IsDir() {
 			return nil
 		}
