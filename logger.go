@@ -11,6 +11,43 @@ import (
 	"time"
 )
 
+type Logger interface {
+	Trace(format string, v ...interface{})
+	Debug(format string, v ...interface{})
+	Info(format string, v ...interface{})
+	Warn(format string, v ...interface{})
+	Error(format string, v ...interface{})
+}
+
+func GetLogger() Logger {
+	return loggercopy
+}
+
+var loggercopy _logger
+
+type _logger struct {
+}
+
+func (this _logger) Trace(format string, v ...interface{}) {
+	output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...), 3)
+}
+
+func (this _logger) Debug(format string, v ...interface{}) {
+	output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...), 3)
+}
+
+func (this _logger) Info(format string, v ...interface{}) {
+	output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...), 3)
+}
+
+func (this _logger) Warn(format string, v ...interface{}) {
+	output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...), 3)
+}
+
+func (this _logger) Error(format string, v ...interface{}) {
+	output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), 3)
+}
+
 const (
 	LOGGER_LEVEL_ERROR byte = 1 << 0
 	LOGGER_LEVEL_WARN  byte = 1<<1 | LOGGER_LEVEL_ERROR
@@ -24,6 +61,7 @@ const (
 	LOGGER_TIMEFORMAT_SECOND     string = "2006-01-02 15:04:05"
 	LOGGER_TIMEFORMAT_NANOSECOND string = "2006-01-02 15:04:05.999999999"
 	LOGGER_TIMEFORMAT_ALL        string = "2006-01-02 15:04:05.999999999 -0700 UTC"
+	code_Level                   int    = 2
 )
 
 func getLevelStr(level byte) string {
@@ -99,7 +137,7 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	delete(filters, "_ROOT")
 	defer func() {
 		if x := recover(); x != nil {
-			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x))
+			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x), code_Level)
 		}
 	}()
 	if name == "" {
@@ -127,57 +165,37 @@ func AddFileter(name string, level byte, path string, timeFormat string, out io.
 	filters[name] = filter
 	go filter.run()
 }
-func output(level byte, content string) {
-	_, file, line, ok := runtime.Caller(2)
+func output(logLevel byte, content string, codeLevel int) {
+	_, file, line, ok := runtime.Caller(codeLevel)
 	var lineInfo string = "-:0"
 	if ok {
 		index := strings.Index(file, "/src/") + 4
 		lineInfo = file[index:] + ":" + strconv.Itoa(line)
 	}
-	content = fmt.Sprintf("\t%s\t%s\t%s\n", getLevelStr(level), lineInfo, content)
+	content = fmt.Sprintf("\t%s\t%s\t%s\n", getLevelStr(logLevel), lineInfo, content)
 	for _, filter := range filters {
-		if filter != nil && filter.canSave(level, lineInfo) {
+		if filter != nil && filter.canSave(logLevel, lineInfo) {
 			filter.cache <- time.Now().Format(filter.timeFormat) + content
 		}
 	}
 }
 
-//func Trace(v ...interface{}) {
-//	output(LOGGER_LEVEL_TRACE, fmt.Sprint(v...))
-//}
-
 func Trace(format string, v ...interface{}) {
-	output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...))
+	output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...), code_Level)
 }
-
-//func Debug(v ...interface{}) {
-//	output(LOGGER_LEVEL_DEBUG, fmt.Sprint(v...))
-//}
 
 func Debug(format string, v ...interface{}) {
-	output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...))
+	output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...), code_Level)
 }
-
-//func Info(v ...interface{}) {
-//	output(LOGGER_LEVEL_INFO, fmt.Sprint(v...))
-//}
 
 func Info(format string, v ...interface{}) {
-	output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...))
+	output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...), code_Level)
 }
-
-//func Warn(v ...interface{}) {
-//	output(LOGGER_LEVEL_WARN, fmt.Sprint(v...))
-//}
 
 func Warn(format string, v ...interface{}) {
-	output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...))
+	output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...), code_Level)
 }
 
-//func Error(v ...interface{}) {
-//	output(LOGGER_LEVEL_ERROR, fmt.Sprint(v...))
-//}
-
 func Error(format string, v ...interface{}) {
-	output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...))
+	output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), code_Level)
 }
