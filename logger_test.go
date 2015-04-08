@@ -7,11 +7,12 @@ import (
 )
 
 func TestBaseLog(t *testing.T) {
-	//AddFileFilterForTime("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log", time.Second*10, 10)
-	//AddFileFilterForDefualt("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log")
-	//AddFileFilterForSize("testTimeLog", LOGGER_LEVEL_DEBUG, "/", "d:/testlog/testLog.log", 3*1024, 10)
-	for {
-		Debugf("test,time is %s", time.Now())
-		time.Sleep(time.Millisecond * 3)
+	addStdOutFilter(LOGGER_LEVEL_DEBUG, "/", "")
+	//	addFileFilterForTime(LOGGER_LEVEL_DEBUG, "/", "/Users/coffee/logs/testLog.log", time.Second*10, 2)
+	//	addFileFilterForDefualt(LOGGER_LEVEL_DEBUG, "/", "/Users/coffee/logs/testLog.log")
+	//	addFileFilterForSize(LOGGER_LEVEL_DEBUG, "/", "/Users/coffee/logs/testLog.log", 3*1024, 2)
+	for a := 0; a < 10000; a++ {
+		Debug("test,time is %s ====%d", time.Now(), a)
 	}
+
 }

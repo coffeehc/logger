@@ -1,47 +1,43 @@
 // config
 
 /*
-	使用goconfig来获取配置，格式如下：
-
-	[log]
-	#日志级别:trace,debug,info,warn,error
-	level=debug
-	path=/
-	#日志适配器:console;file
-	adapter=console
-	#其他日志处理器
-	loggers=file
-
-	[log_file]
-	level=error
-	path=/
-	adapter=file
-	logPath=/logs/box/box.log
-	rotate=3
-	#备份策略：size or time  or default
-	rotatePolicy=time
-	#备份范围：如果策略是time则表示时间间隔N分钟，如果是size则表示每个日志的最大大小(MB)
-	rotateScope=
+ 使用goconfig来获取配置，格式如下：
+-
+ level: debug
+ package_path: /
+ adapter: console
+-
+ level: error
+ package_path: /
+ adapter: file
+ log_path: /logs/box/box.log
+ rotate: 3
+ #备份策略：size or time  or default
+ rotate_policy: time
+ #备份范围：如果策略是time则表示时间间隔N分钟，如果是size则表示每个日志的最大大小(MB)
+ rotate_scope: 10
 */
 
 package logger
 
 import (
+	"flag"
+	"fmt"
+	"io/ioutil"
 	"strings"
 	"time"
 
-	"github.com/msbranco/goconfig"
+	"gopkg.in/yaml.v2"
 )
 
-type logger_config struct {
-	name         string
-	level        string
-	path         string
-	adapter      string
-	rotate       int
-	rotatePolicy string
-	rotateScope  int64
-	logPath      string
+type Logger_config struct {
+	Level         string //日志级别
+	Package_path  string //日志路径
+	Adapter       string //适配器,console,file两种
+	Rotate        int    //日志切割个数
+	Rotate_policy string //切割策略,time or size or  default
+	Rotate_scope  int64  //切割范围:如果按时间切割则表示的n分钟,如果是size这表示的是文件大小MB
+	Log_path      string //如果适配器使用的file则用来指定文件路径
 }
 
 const (
@@ -57,63 +53,70 @@ const (
 	CONFIG_LOGPATH       = "logPath"
 )
 
-func LoadLoggerConfig(config *goconfig.ConfigFile) {
-	rootConfig := buildLogConfig(config, CONFIG_SELECT)
-	rootConfig.name = "root"
-	addLogger(rootConfig)
-	loggers, _ := config.GetString(CONFIG_SELECT, CONFIG_LOGGERS)
-	if loggers != "" {
-		childLoggers := strings.Split(loggers, ",")
-		for _, child := range childLoggers {
-			if child == "" {
-				continue
-			}
-			childSelect := CONFIG_SELECT_PREFIX + child
-			if config.HasSection(childSelect) {
-				childConfig := buildLogConfig(config, childSelect)
-				childConfig.name = child
-				addLogger(childConfig)
-			} else {
-				Warn("没有找到%s的日志配置", childSelect)
-			}
+var _loggerConf *string = flag.String("loggerConf", "", "日志文件路径")
+
+//加载日志配置,如果指定了-loggerConf参数,则加载这个参数指定的配置文件,如果没有则使用默认的配置
+func loadLoggerConfig() {
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+	confs := parseConfile(*_loggerConf)
+	if confs == nil {
+		confs = []*Logger_config{&Logger_config{Level: "debug", Package_path: "/", Adapter: "console"}}
+	}
+	for _, conf := range confs {
+		addLogger(conf)
+	}
+}
+
+func parseConfile(loggerConf string) (confs []*Logger_config) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("解析配置文件%s出错:%s\n", loggerConf, r)
+		}
+	}()
+	if *_loggerConf != "" {
+		data, err := ioutil.ReadFile(loggerConf)
+		if err != nil {
+			fmt.Printf("加载文件%s错误:%s\n", loggerConf, err)
+		} else {
+			yaml.Unmarshal(data, confs)
 		}
 	}
+	return
 }
 
-func buildLogConfig(config *goconfig.ConfigFile, selectName string) *logger_config {
-	level, _ := config.GetString(selectName, CONFIG_LEVEL)
-	path, _ := config.GetString(selectName, CONFIG_PATH)
-	adapter, _ := config.GetString(selectName, CONFIG_ADAPTER)
-	rotate, _ := config.GetInt64(selectName, CONFIG_ROTATE)
-	rotatePolicy, _ := config.GetString(selectName, CONFIG_ROTATEPOLICY)
-	rotateScope, _ := config.GetInt64(selectName, CONFIG_ROTATESCOPE)
-	logPath, _ := config.GetString(selectName, CONFIG_LOGPATH)
-	return &logger_config{level: level, path: path, adapter: adapter, rotate: int(rotate), rotatePolicy: rotatePolicy, rotateScope: rotateScope, logPath: logPath}
-}
-
-func addLogger(conf *logger_config) {
-	if strings.EqualFold("file", conf.adapter) {
+//添加日志配置
+func addLogger(conf *Logger_config) {
+	switch conf.Adapter {
+	case "file":
 		addFileLogger(conf)
-	} else {
+		break
+	case "console":
 		addConsoleLogger(conf)
+		break
+	default:
+		fmt.Printf("不能识别的日志适配器:%s", conf.Adapter)
 	}
 }
 
-func addConsoleLogger(conf *logger_config) {
-	AddStdOutFilter(conf.name, getLevel(conf.level), conf.path, LOGGER_TIMEFORMAT_NANOSECOND)
+//添加console的日志配置
+func addConsoleLogger(conf *Logger_config) {
+	addStdOutFilter(getLevel(conf.Level), conf.Package_path, LOGGER_TIMEFORMAT_NANOSECOND)
 }
 
-func addFileLogger(conf *logger_config) {
-	rotatePolicy := strings.ToLower(conf.rotatePolicy)
+//添加文件系统的日志配置
+func addFileLogger(conf *Logger_config) {
+	rotatePolicy := strings.ToLower(conf.Rotate_policy)
 	switch rotatePolicy {
 	case "time":
-		AddFileFilterForTime(conf.name, getLevel(conf.level), conf.path, conf.logPath, time.Minute*time.Duration(conf.rotateScope), conf.rotate)
+		addFileFilterForTime(getLevel(conf.Level), conf.Package_path, conf.Log_path, time.Minute*time.Duration(conf.Rotate_scope), conf.Rotate)
 		return
 	case "size":
-		AddFileFilterForSize(conf.name, getLevel(conf.level), conf.path, conf.logPath, conf.rotateScope*1048576, conf.rotate)
+		addFileFilterForSize(getLevel(conf.Level), conf.Package_path, conf.Log_path, conf.Rotate_scope*1048576, conf.Rotate)
 		return
 	default:
-		AddFileFilterForDefualt(conf.name, getLevel(conf.level), conf.path, conf.logPath)
+		addFileFilterForDefualt(getLevel(conf.Level), conf.Package_path, conf.Log_path)
 		return
 	}
 }

@@ -85,7 +85,6 @@ type FileLogWriter struct {
 }
 
 type FileLogConfig struct {
-	Name         string              //名称
 	Path         string              //匹配路径
 	Timeformat   string              //时间格式
 	Rotate       int                 //rotate备份个数
@@ -96,9 +95,6 @@ type FileLogConfig struct {
 }
 
 func checkConfig(conf *FileLogConfig) {
-	if conf.Name == "" {
-		panic("没有指定日志别名")
-	}
 	if conf.Path == "" {
 		panic("没有指定需要记录的日志路径")
 	}
@@ -116,47 +112,44 @@ func checkConfig(conf *FileLogConfig) {
 		conf.RotatePolicy = new(DefaultRotatePolicy)
 	}
 }
-func AddFileFilter(conf *FileLogConfig) {
+func addFileFilter(conf *FileLogConfig) {
 	checkConfig(conf)
 	conf.writer = new(FileLogWriter)
 	conf.writer.config = conf
 	conf.writer.count = 0
 	conf.writer.Rotate()
-	AddFileter(conf.Name, conf.Level, conf.Path, conf.Timeformat, conf.writer)
+	AddFileter(conf.Level, conf.Path, conf.Timeformat, conf.writer)
 }
 
-func AddFileFilterForDefualt(name string, level byte, path string, logPath string) {
+func addFileFilterForDefualt(level byte, path string, logPath string) {
 	conf := new(FileLogConfig)
-	conf.Name = name
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
-	AddFileFilter(conf)
+	addFileFilter(conf)
 }
 
-func AddFileFilterForTime(name string, level byte, path string, logPath string, times time.Duration, rotate int) {
+func addFileFilterForTime(level byte, path string, logPath string, times time.Duration, rotate int) {
 	conf := new(FileLogConfig)
-	conf.Name = name
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewTimeRotatePolicy(times)
 	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
-	AddFileFilter(conf)
+	addFileFilter(conf)
 }
 
-func AddFileFilterForSize(name string, level byte, path string, logPath string, maxBytes int64, rotate int) {
+func addFileFilterForSize(level byte, path string, logPath string, maxBytes int64, rotate int) {
 	conf := new(FileLogConfig)
-	conf.Name = name
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewSizeRotatePolicy(maxBytes)
 	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
-	AddFileFilter(conf)
+	addFileFilter(conf)
 }
 
 func (this *FileLogWriter) Rotate() {
@@ -193,7 +186,6 @@ func (this *FileLogWriter) Rotate() {
 }
 
 func clearLog(logPath string, rotateSize int) {
-	//TODO 所有多余的都要删除
 	dirIndex := strings.LastIndex(logPath, "/")
 	files := make([]string, 0)
 	logPath = logPath[:dirIndex]
@@ -219,12 +211,22 @@ func clearLog(logPath string, rotateSize int) {
 	}
 }
 
+func deforeRotateProcess(this *FileLogWriter) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("切割日志出错,%s", r)
+			this.count = 0
+		}
+		this.count = 0
+	}()
+	this.Flush()
+	this.Rotate()
+	this.config.RotatePolicy.RotateAfter()
+}
+
 func (this *FileLogWriter) Write(p []byte) (nn int, err error) {
 	if this.config.RotatePolicy.CanRotate(this) {
-		this.Flush()
-		this.Rotate()
-		this.config.RotatePolicy.RotateAfter()
-		this.count = 0
+		deforeRotateProcess(this)
 	}
 	for len(p) > (len(this.buf)-this.n) && this.err == nil {
 		var n int
