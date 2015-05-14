@@ -28,6 +28,7 @@ appenders:
   adapter: console
   #使用golang自己的timeFormat
   timeformat: 2006-01-02 15:04:05
+  format: %T %L %C %M
  -
   level: error
   package_path: /
@@ -43,6 +44,14 @@ appenders:
 
 2015-4-29
 1. AddAppender用于自己使用编程方式来定义日志,其实也可以用底层的Filter接口来扩展会更灵活
+
+2015-5-15
+在配置中加入了format的参数设置,提供四种标记来组合日志,标记说明如下:
+
+> 1. %T:时间标记,会与timeformat配合使用
+> 2. %L:日志级别,这会输出相应的日志级别
+> 3. %C:代码信息,这包括包文件描述和日志在第几行打印
+> 4. %M:这个就是需要打印的具体日志内容 
 
 ###TODO
 1. 需要支持没有指定配置文件路径则在程序目录下寻找conf/log.yaml文件来加载的方式,简化启动参数

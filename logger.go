@@ -2,6 +2,7 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	FORMAT_TIME     = "%T"
+	FORMAT_LEVEL    = "%L"
+	FORMAT_CODEINFO = "%C"
+	FORMAT_MESSGAE  = "%M"
 )
 
 type Logger interface {
@@ -88,11 +96,12 @@ type Flusher interface {
 
 //日志拦截器定义
 type logFilter struct {
-	level      byte   //拦截级别
-	path       string //拦截路径
-	timeFormat string //时间戳格式
+	level      byte        //拦截级别
+	path       string      //拦截路径
+	timeFormat string      //时间戳格式
+	format     []logFormat //日志格式
 	out        io.Writer
-	cache      chan string
+	cache      chan *logContent
 	stop       chan bool
 }
 
@@ -103,12 +112,31 @@ func (this *logFilter) canSave(level byte, lineInfo string) bool {
 
 //过滤器后台输出goruntine
 func (this *logFilter) run() {
+	buf := bytes.NewBuffer(nil)
 	for {
 		select {
 		case content := <-this.cache:
-			this.out.Write([]byte(content))
+			if this.canSave(content.level, content.lineInfo) {
+				buf.Reset()
+				for _, f := range this.format {
+					buf.Write(f.data)
+					switch f.appendContent {
+					case FORMAT_TIME:
+						buf.WriteString(content.appendTime.Format(this.timeFormat))
+					case FORMAT_LEVEL:
+						buf.WriteString(getLevelStr(content.level))
+					case FORMAT_CODEINFO:
+						buf.WriteString(content.lineInfo)
+					case FORMAT_MESSGAE:
+						buf.WriteString(content.content)
+					default:
+					}
+				}
+				buf.WriteByte('\n')
+				buf.WriteTo(this.out)
+			}
 			continue
-		case <-time.After(time.Second * 1):
+		case <-time.After(time.Millisecond * 500):
 			if v, ok := this.out.(Flusher); ok {
 				v.Flush()
 			}
@@ -132,8 +160,8 @@ func init() {
 	loadLoggerConfig(*_loggerConf)
 }
 
-func addStdOutFilter(level byte, path string, timeFormat string) {
-	AddFileter(level, path, timeFormat, os.Stdout)
+func addStdOutFilter(level byte, path string, timeFormat string, format string) {
+	AddFileter(level, path, timeFormat, format, os.Stdout)
 }
 
 //清空过滤器,主要用于自定义处理日志
@@ -142,7 +170,7 @@ func ClearFilter() {
 }
 
 //添加日志过滤器,参数说明:级别,包路径,时间格式,Writer接口
-func AddFileter(level byte, path string, timeFormat string, out io.Writer) {
+func AddFileter(level byte, path string, timeFormat string, format string, out io.Writer) {
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
 	}
@@ -157,6 +185,9 @@ func AddFileter(level byte, path string, timeFormat string, out io.Writer) {
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
 	}
+	if format == "" {
+		format = "%T %L %C %M"
+	}
 	if out == nil {
 		panic("拦截器输出不能为空")
 	}
@@ -165,10 +196,61 @@ func AddFileter(level byte, path string, timeFormat string, out io.Writer) {
 	filter.path = path
 	filter.timeFormat = timeFormat
 	filter.out = out
-	filter.cache = make(chan string, 200)
+	filter.format = parseFormat(format)
+	filter.cache = make(chan *logContent, 200)
 	filter.stop = make(chan bool, 1)
 	filters = append(filters, filter)
 	go filter.run()
+}
+
+type logFormat struct {
+	data          []byte
+	appendContent string
+}
+
+func parseFormat(format string) []logFormat {
+	fs := make([]logFormat, 0)
+	fc := []byte(format)
+	start := 0
+	i := 0
+	for ; i < len(fc); i++ {
+		b := fc[i]
+		if b == '%' {
+			switch fc[i+1] {
+			case 'T':
+				fs = append(fs, logFormat{data: fc[start:i], appendContent: FORMAT_TIME})
+				i += 1
+				start = i + 1
+				continue
+			case 'L':
+				fs = append(fs, logFormat{data: fc[start:i], appendContent: FORMAT_LEVEL})
+				i += 1
+				start = i + 1
+				break
+			case 'C':
+				fs = append(fs, logFormat{data: fc[start:i], appendContent: FORMAT_CODEINFO})
+				i += 1
+				start = i + 1
+				break
+			case 'M':
+				fs = append(fs, logFormat{data: fc[start:i], appendContent: FORMAT_MESSGAE})
+				i += 1
+				start = i + 1
+				break
+			}
+		}
+	}
+	if i > start {
+		fs = append(fs, logFormat{data: fc[start : i-1]})
+	}
+	return fs
+}
+
+type logContent struct {
+	appendTime time.Time
+	level      byte
+	lineInfo   string
+	content    string
 }
 
 // real out implement
@@ -179,10 +261,10 @@ func output(logLevel byte, content string, codeLevel int) string {
 		index := strings.Index(file, "/src/") + 4
 		lineInfo = file[index:] + ":" + strconv.Itoa(line)
 	}
-	contentWarp := fmt.Sprintf("\t%s\t%s\t%s\n", getLevelStr(logLevel), lineInfo, content)
+	log := &logContent{time.Now(), logLevel, lineInfo, content}
 	for _, filter := range filters {
-		if filter != nil && filter.canSave(logLevel, lineInfo) {
-			filter.cache <- time.Now().Format(filter.timeFormat) + contentWarp
+		if filter != nil {
+			filter.cache <- log
 		}
 	}
 	return content

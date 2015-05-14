@@ -85,8 +85,9 @@ type FileLogWriter struct {
 }
 
 type FileLogConfig struct {
-	Path         string              //匹配路径
-	Timeformat   string              //时间格式
+	Path         string //匹配路径
+	Timeformat   string //时间格式
+	Format       string
 	Rotate       int                 //rotate备份个数
 	StorePath    string              //日志存放路径,如:/log/test/log.log
 	RotatePolicy FileLogRotatePolicy //循环策略
@@ -118,19 +119,20 @@ func addFileFilter(conf *FileLogConfig) {
 	conf.writer.config = conf
 	conf.writer.count = 0
 	conf.writer.Rotate()
-	AddFileter(conf.Level, conf.Path, conf.Timeformat, conf.writer)
+	AddFileter(conf.Level, conf.Path, conf.Timeformat, conf.Format, conf.writer)
 }
 
-func addFileFilterForDefualt(level byte, path string, logPath string, timeFormat string) {
+func addFileFilterForDefualt(level byte, path string, logPath string, timeFormat string, format string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Timeformat = timeFormat
+	conf.Format = format
 	addFileFilter(conf)
 }
 
-func addFileFilterForTime(level byte, path string, logPath string, times time.Duration, rotate int, timeFormat string) {
+func addFileFilterForTime(level byte, path string, logPath string, times time.Duration, rotate int, timeFormat string, format string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
@@ -138,10 +140,11 @@ func addFileFilterForTime(level byte, path string, logPath string, times time.Du
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewTimeRotatePolicy(times)
 	conf.Timeformat = timeFormat
+	conf.Format = format
 	addFileFilter(conf)
 }
 
-func addFileFilterForSize(level byte, path string, logPath string, maxBytes int64, rotate int, timeFormat string) {
+func addFileFilterForSize(level byte, path string, logPath string, maxBytes int64, rotate int, timeFormat string, format string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
@@ -149,6 +152,7 @@ func addFileFilterForSize(level byte, path string, logPath string, maxBytes int6
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewSizeRotatePolicy(maxBytes)
 	conf.Timeformat = timeFormat
+	conf.Format = format
 	addFileFilter(conf)
 }
 

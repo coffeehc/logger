@@ -44,6 +44,7 @@ type LoggerAppender struct {
 	Rotate_scope  int64  `yaml:"rotate_scope"`  //切割范围:如果按时间切割则表示的n分钟,如果是size这表示的是文件大小MB
 	Log_path      string `yaml:"log_path"`      //如果适配器使用的file则用来指定文件路径
 	Timeformat    string `yaml:"timeformat"`    //日志格式
+	Format        string `yaml:"format"`
 }
 
 type LoggerConfig struct {
@@ -118,7 +119,7 @@ func AddAppender(appender LoggerAppender) {
 
 //添加console的日志配置
 func addConsoleAppender(appender LoggerAppender) {
-	addStdOutFilter(getLevel(appender.Level), appender.Package_path, appender.Timeformat)
+	addStdOutFilter(getLevel(appender.Level), appender.Package_path, appender.Timeformat, appender.Format)
 }
 
 //添加文件系统的日志配置
@@ -126,13 +127,13 @@ func addFileAppender(appender LoggerAppender) {
 	rotatePolicy := strings.ToLower(appender.Rotate_policy)
 	switch rotatePolicy {
 	case "time":
-		addFileFilterForTime(getLevel(appender.Level), appender.Package_path, appender.Log_path, time.Minute*time.Duration(appender.Rotate_scope), appender.Rotate, appender.Timeformat)
+		addFileFilterForTime(getLevel(appender.Level), appender.Package_path, appender.Log_path, time.Minute*time.Duration(appender.Rotate_scope), appender.Rotate, appender.Timeformat, appender.Format)
 		return
 	case "size":
-		addFileFilterForSize(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Rotate_scope*1048576, appender.Rotate, appender.Timeformat)
+		addFileFilterForSize(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Rotate_scope*1048576, appender.Rotate, appender.Timeformat, appender.Format)
 		return
 	default:
-		addFileFilterForDefualt(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Timeformat)
+		addFileFilterForDefualt(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Timeformat, appender.Format)
 		return
 	}
 }
