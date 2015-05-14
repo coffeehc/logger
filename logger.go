@@ -56,7 +56,7 @@ const (
 	LOGGER_LEVEL_TRACE byte = 1<<4 | LOGGER_LEVEL_DEBUG
 
 	LOGGER_DEFAULT_BUFSIZE int           = 1024
-	LOGGER_DEFAULT_TIMEOUT time.Duration = time.Second * 10
+	LOGGER_DEFAULT_TIMEOUT time.Duration = time.Second * 1
 
 	LOGGER_TIMEFORMAT_SECOND     string = "2006-01-02 15:04:05"
 	LOGGER_TIMEFORMAT_NANOSECOND string = "2006-01-02 15:04:05.999999999"
@@ -93,6 +93,7 @@ type logFilter struct {
 	timeFormat string //时间戳格式
 	out        io.Writer
 	cache      chan string
+	stop       chan bool
 }
 
 //判断是否需要过滤器处理
@@ -107,13 +108,19 @@ func (this *logFilter) run() {
 		case content := <-this.cache:
 			this.out.Write([]byte(content))
 			continue
-		case <-time.After(time.Second * 5):
+		case <-time.After(time.Second * 1):
 			if v, ok := this.out.(Flusher); ok {
 				v.Flush()
 			}
 			continue
+		case <-this.stop:
+			return
 		}
 	}
+}
+
+func (this *logFilter) clear() {
+	this.stop <- true
 }
 
 var (
@@ -122,15 +129,10 @@ var (
 )
 
 func init() {
-	filters = make([]*logFilter, 0)
-	loadLoggerConfig()
-	Info("logger框架初始化完成")
+	loadLoggerConfig(*_loggerConf)
 }
 
 func addStdOutFilter(level byte, path string, timeFormat string) {
-	if timeFormat == "" {
-		timeFormat = LOGGER_TIMEFORMAT_NANOSECOND
-	}
 	AddFileter(level, path, timeFormat, os.Stdout)
 }
 
@@ -141,6 +143,9 @@ func ClearFilter() {
 
 //添加日志过滤器,参数说明:级别,包路径,时间格式,Writer接口
 func AddFileter(level byte, path string, timeFormat string, out io.Writer) {
+	if timeFormat == "" {
+		timeFormat = LOGGER_TIMEFORMAT_SECOND
+	}
 	defer func() {
 		if x := recover(); x != nil {
 			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x), code_Level)
@@ -161,9 +166,12 @@ func AddFileter(level byte, path string, timeFormat string, out io.Writer) {
 	filter.timeFormat = timeFormat
 	filter.out = out
 	filter.cache = make(chan string, 200)
+	filter.stop = make(chan bool, 1)
 	filters = append(filters, filter)
 	go filter.run()
 }
+
+// real out implement
 func output(logLevel byte, content string, codeLevel int) string {
 	_, file, line, ok := runtime.Caller(codeLevel)
 	var lineInfo string = "-:0"
@@ -180,22 +188,27 @@ func output(logLevel byte, content string, codeLevel int) string {
 	return content
 }
 
+//print trace log
 func Trace(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...), code_Level)
 }
 
+//print debug log
 func Debug(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...), code_Level)
 }
 
+//print Info log
 func Info(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...), code_Level)
 }
 
+//print Warn log
 func Warn(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...), code_Level)
 }
 
+// print Error log
 func Error(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), code_Level)
 }

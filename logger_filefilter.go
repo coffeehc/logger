@@ -121,34 +121,34 @@ func addFileFilter(conf *FileLogConfig) {
 	AddFileter(conf.Level, conf.Path, conf.Timeformat, conf.writer)
 }
 
-func addFileFilterForDefualt(level byte, path string, logPath string) {
+func addFileFilterForDefualt(level byte, path string, logPath string, timeFormat string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
-	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
+	conf.Timeformat = timeFormat
 	addFileFilter(conf)
 }
 
-func addFileFilterForTime(level byte, path string, logPath string, times time.Duration, rotate int) {
+func addFileFilterForTime(level byte, path string, logPath string, times time.Duration, rotate int, timeFormat string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewTimeRotatePolicy(times)
-	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
+	conf.Timeformat = timeFormat
 	addFileFilter(conf)
 }
 
-func addFileFilterForSize(level byte, path string, logPath string, maxBytes int64, rotate int) {
+func addFileFilterForSize(level byte, path string, logPath string, maxBytes int64, rotate int, timeFormat string) {
 	conf := new(FileLogConfig)
 	conf.Level = level
 	conf.Path = path
 	conf.StorePath = logPath
 	conf.Rotate = rotate
 	conf.RotatePolicy = NewSizeRotatePolicy(maxBytes)
-	conf.Timeformat = LOGGER_TIMEFORMAT_NANOSECOND
+	conf.Timeformat = timeFormat
 	addFileFilter(conf)
 }
 

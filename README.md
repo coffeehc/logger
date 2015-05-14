@@ -20,24 +20,30 @@ coffeehc/logger 是一个基础的日志框架,提供扩展的开放logFilter接
 
 使用配置的方式(yaml语法),配置文件内容如下:
 ```
--
- level: debug
- package_path: /
- adapter: console
--
- level: error
- package_path: /
- adapter: file
- log_path: /logs/box/box.log
- rotate: 3
- #备份策略：size or time  or default
- rotate_policy: time
- #备份范围：如果策略是time则表示时间间隔N分钟，如果是size则表示每个日志的最大大小(MB)
- rotate_scope: 10
-
+context: Default
+appenders:
+ -
+  level: debug
+  package_path: /
+  adapter: console
+  #使用golang自己的timeFormat
+  timeformat: 2006-01-02 15:04:05
+ -
+  level: error
+  package_path: /
+  adapter: file
+  log_path: /logs/box/box.log
+  rotate: 3
+  #备份策略：size or time  or default
+  rotate_policy: time
+  #备份范围：如果策略是time则表示时间间隔N分钟，如果是size则表示每个日志的最大大小(MB)
+  rotate_scope: 10
 ```
 系统默认会取-loggerConf参数的值来加载配置文件,如果没有指定则使用debug对所有的包路径下的日志打印到控制台
 
+2015-4-29
+1. AddAppender用于自己使用编程方式来定义日志,其实也可以用底层的Filter接口来扩展会更灵活
+
 ###TODO
-1. 需要支持没有指定配置文件路径则在程序目录下寻找log.yaml文件来加载的方式,简化启动参数
+1. 需要支持没有指定配置文件路径则在程序目录下寻找conf/log.yaml文件来加载的方式,简化启动参数
 2. 暂不支持TCP方式存储日志,以后看情况再提供,只要实现io.Writer的接口就可以了,自己动手,丰衣足食
