@@ -74,12 +74,14 @@ func loadLoggerConfig(loggerConf string) {
 	}
 	filters = make([]*logFilter, 0)
 	conf := parseConfile(loggerConf)
-	if conf == nil {
+	if conf == nil || len(conf.Appenders) == 0 {
+		fmt.Println("没有指定配置文件或者日志配置出错,使用默认配置")
 		conf = &LoggerConfig{Context: "Default", Appenders: []LoggerAppender{LoggerAppender{Level: "debug", Package_path: "/", Adapter: "console"}}}
 	}
 	for _, appender := range conf.Appenders {
 		AddAppender(appender)
 	}
+
 }
 
 func parseConfile(loggerConf string) *LoggerConfig {

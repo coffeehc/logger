@@ -99,9 +99,6 @@ func checkConfig(conf *FileLogConfig) {
 	if conf.Path == "" {
 		panic("没有指定需要记录的日志路径")
 	}
-	if conf.Timeformat == "" {
-		panic("没有指定日志的时间格式")
-	}
 	if conf.StorePath == "" {
 		panic("没有指定日志的存储路径")
 	}
@@ -158,7 +155,10 @@ func addFileFilterForSize(level byte, path string, logPath string, maxBytes int6
 
 func (this *FileLogWriter) Rotate() {
 	if this.wr == nil {
-		os.MkdirAll(filepath.Dir(this.config.StorePath), 0666)
+		err := os.MkdirAll(filepath.Dir(this.config.StorePath), 0666)
+		if err != nil {
+			panic(fmt.Sprintf("创建日志目录[%s]失败:%s", filepath.Dir(this.config.StorePath), err))
+		}
 		fileInfo, err := os.Stat(this.config.StorePath)
 		if err == nil && fileInfo.Size() != 0 {
 			bakName := this.config.StorePath + "." + strconv.FormatInt(time.Now().Unix(), 10)

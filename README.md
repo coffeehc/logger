@@ -17,7 +17,43 @@ coffeehc/logger 是一个基础的日志框架,提供扩展的开放logFilter接
 4.	warn
 5.	error
 
+#### API说明
 
+```go
+    func Trace(format string, v ...interface{}) string 
+    func Debug(format string, v ...interface{}) string 
+    func Warn(format string, v ...interface{}) string 
+    func Info(format string, v ...interface{}) string 
+    func Error(format string, v ...interface{}) string 
+```
+
+#### 编码方式定义Appender,用于程序自主定义日志
+
+```go
+    func AddAppender(appender LoggerAppender) 
+    
+    type LoggerAppender struct {
+        Level         string `yaml:"level"`         //日志级别
+        Package_path  string `yaml:"package_path"`  //日志路径
+        Adapter       string `yaml:"adapter"`       //适配器,console,file两种
+        Rotate        int    `yaml:"rotate"`        //日志切割个数
+        Rotate_policy string `yaml:"rotate_policy"` //切割策略,time or size or  default
+        Rotate_scope  int64  `yaml:"rotate_scope"`  //切割范围:如果按时间切割则表示的n分钟,如果是size这表示的是文件大小MB
+        Log_path      string `yaml:"log_path"`      //如果适配器使用的file则用来指定文件路径
+        Timeformat    string `yaml:"timeformat"`    //日志格式
+        Format        string `yaml:"format"`
+}     
+```
+
+#### 自定义更低级别的Filter
+
+```go
+
+    func AddFileter(level byte, path string, timeFormat string, format string, out io.Writer) 
+```
+只需要将out实现为任意想输出的方式,tcp,http,db等都可以
+
+#### 配置说明
 使用配置的方式(yaml语法),配置文件内容如下:
 ```
 context: Default
@@ -53,6 +89,8 @@ appenders:
 > 3. %C:代码信息,这包括包文件描述和日志在第几行打印
 > 4. %M:这个就是需要打印的具体日志内容 
 
+支持在程序运行目录下查找conf/log.yml文件作为默认的日志配置,如果不指定-loggerConf的话,可以直接将配置文件放在这下面,程序启动的时候可以直接读取配置
+
 ###TODO
-1. 需要支持没有指定配置文件路径则在程序目录下寻找conf/log.yaml文件来加载的方式,简化启动参数
+1. ~~需要支持没有指定配置文件路径则在程序目录下寻找conf/log.yaml文件来加载的方式,简化启动参数~~
 2. 暂不支持TCP方式存储日志,以后看情况再提供,只要实现io.Writer的接口就可以了,自己动手,丰衣足食
