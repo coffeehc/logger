@@ -59,19 +59,21 @@ func (this _logger) Error(format string, v ...interface{}) string {
 	return output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), 3)
 }
 
-const (
-	LOGGER_LEVEL_ERROR byte = 1 << 0
-	LOGGER_LEVEL_WARN  byte = 1<<1 | LOGGER_LEVEL_ERROR
-	LOGGER_LEVEL_INFO  byte = 1<<2 | LOGGER_LEVEL_WARN
-	LOGGER_LEVEL_DEBUG byte = 1<<3 | LOGGER_LEVEL_INFO
-	LOGGER_LEVEL_TRACE byte = 1<<4 | LOGGER_LEVEL_DEBUG
-
+var (
 	//默认的日志级别
 	LOGGER_DEFAULT_LEVEL = "debug"
 	//日志缓冲区默认大小
 	LOGGER_DEFAULT_BUFSIZE int = 1024
 	//日志缓冲区Flush超时设置
 	LOGGER_DEFAULT_TIMEOUT time.Duration = time.Second * 1
+)
+
+const (
+	LOGGER_LEVEL_ERROR byte = 1 << 0
+	LOGGER_LEVEL_WARN  byte = 1<<1 | LOGGER_LEVEL_ERROR
+	LOGGER_LEVEL_INFO  byte = 1<<2 | LOGGER_LEVEL_WARN
+	LOGGER_LEVEL_DEBUG byte = 1<<3 | LOGGER_LEVEL_INFO
+	LOGGER_LEVEL_TRACE byte = 1<<4 | LOGGER_LEVEL_DEBUG
 
 	LOGGER_TIMEFORMAT_SECOND     string = "2006-01-02 15:04:05"
 	LOGGER_TIMEFORMAT_NANOSECOND string = "2006-01-02 15:04:05.999999999"
@@ -92,7 +94,7 @@ func getLevelStr(level byte) string {
 	case LOGGER_LEVEL_TRACE:
 		return "TRACE"
 	default:
-		return "--"
+		return "DEBUG"
 	}
 }
 
@@ -163,6 +165,20 @@ var (
 	evnRootPathLen int
 )
 
+//设置对应路径下默认的日志级别,可动态调整日志级别
+func SetDefaultLevel(path string, level byte) {
+	if path == "" {
+		path = "/"
+	}
+	for _, filter := range filters {
+		if filter.path == path {
+			filter.level = level
+			return
+		}
+	}
+}
+
+//启动日志
 func init() {
 	loadLoggerConfig(*_loggerConf)
 }
