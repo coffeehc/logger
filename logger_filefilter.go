@@ -12,29 +12,29 @@ import (
 	"time"
 )
 
-const (
-	TIME_TYPE_Hour = 1
-	TIME_TYPE_Day  = 2
-)
-
+//文件日志循环策略
 type FileLogRotatePolicy interface {
+	//是否需要循环分割
 	CanRotate(fileLogWriter *FileLogWriter) bool
+	//循环风格的后置处理
 	RotateAfter()
 }
-
-type DefaultRotatePolicy struct {
+type defaultRotatePolicy struct {
 }
 
-func (this *DefaultRotatePolicy) CanRotate(fileLogWriter *FileLogWriter) bool {
+func (this *defaultRotatePolicy) CanRotate(fileLogWriter *FileLogWriter) bool {
 	return false
 }
-func (this *DefaultRotatePolicy) RotateAfter() {
+func (this *defaultRotatePolicy) RotateAfter() {
 }
 
+//按文件大小的循环日志的策略
 type SizeRotatePolicy struct {
+	//文件最大大小
 	maxBytes int64
 }
 
+//创建一个按大小循环的策略
 func NewSizeRotatePolicy(maxBytes int64) *SizeRotatePolicy {
 	return &SizeRotatePolicy{maxBytes: maxBytes}
 }
@@ -45,8 +45,8 @@ func (this *SizeRotatePolicy) CanRotate(fileLogWriter *FileLogWriter) bool {
 func (this *SizeRotatePolicy) RotateAfter() {
 }
 
+//按时间循环日志的策略
 type TimeRotatePolicy struct {
-	FileLogRotatePolicy
 	canRotate bool
 }
 
@@ -57,12 +57,14 @@ func (this *TimeRotatePolicy) RotateAfter() {
 	this.canRotate = false
 }
 
-func NewTimeRotatePolicy(duration time.Duration) *TimeRotatePolicy {
+//创建信的按时间循环日志的策略
+func NewTimeRotatePolicy(delay time.Duration) *TimeRotatePolicy {
 	this := new(TimeRotatePolicy)
 	this.canRotate = false
 	now := time.Now()
-	nowTime := now.Truncate(duration)
-	nowTime = nowTime.Add(duration)
+	//对齐
+	nowTime := now.Truncate(delay)
+	nowTime = nowTime.Add(delay)
 	go func() {
 		for {
 			select {
@@ -75,6 +77,7 @@ func NewTimeRotatePolicy(duration time.Duration) *TimeRotatePolicy {
 	return this
 }
 
+//文件日志Writer封装
 type FileLogWriter struct {
 	err    error
 	buf    []byte
@@ -84,6 +87,7 @@ type FileLogWriter struct {
 	count  int64
 }
 
+//文件日志配置
 type FileLogConfig struct {
 	Path         string //匹配路径
 	Timeformat   string //时间格式
@@ -107,7 +111,7 @@ func checkConfig(conf *FileLogConfig) {
 		conf.Rotate = 3
 	}
 	if conf.RotatePolicy == nil {
-		conf.RotatePolicy = new(DefaultRotatePolicy)
+		conf.RotatePolicy = new(defaultRotatePolicy)
 	}
 }
 func addFileFilter(conf *FileLogConfig) {
@@ -153,6 +157,7 @@ func addFileFilterForSize(level byte, path string, logPath string, maxBytes int6
 	addFileFilter(conf)
 }
 
+//执行循环切割日志操作
 func (this *FileLogWriter) Rotate() {
 	if this.wr == nil {
 		err := os.MkdirAll(filepath.Dir(this.config.StorePath), 0666)
@@ -228,6 +233,7 @@ func deforeRotateProcess(this *FileLogWriter) {
 	this.config.RotatePolicy.RotateAfter()
 }
 
+//写入日志
 func (this *FileLogWriter) Write(p []byte) (nn int, err error) {
 	if this.config.RotatePolicy.CanRotate(this) {
 		deforeRotateProcess(this)
@@ -256,6 +262,7 @@ func (this *FileLogWriter) Write(p []byte) (nn int, err error) {
 	return nn, nil
 }
 
+//落盘操作
 func (this *FileLogWriter) Flush() error {
 	if this.err != nil {
 		return this.err

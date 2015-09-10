@@ -29,36 +29,30 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"gopkg.in/yaml.v2"
 )
 
-type LoggerAppender struct {
-	Level         string `yaml:"level"`         //日志级别
-	Package_path  string `yaml:"package_path"`  //日志路径
-	Adapter       string `yaml:"adapter"`       //适配器,console,file两种
-	Rotate        int    `yaml:"rotate"`        //日志切割个数
-	Rotate_policy string `yaml:"rotate_policy"` //切割策略,time or size or  default
-	Rotate_scope  int64  `yaml:"rotate_scope"`  //切割范围:如果按时间切割则表示的n分钟,如果是size这表示的是文件大小MB
-	Log_path      string `yaml:"log_path"`      //如果适配器使用的file则用来指定文件路径
-	Timeformat    string `yaml:"timeformat"`    //日志格式
-	Format        string `yaml:"format"`
-}
-
+//日志配置
 type LoggerConfig struct {
-	Context   string           `yaml:"context"`
+	//配置上下文
+	Context string `yaml:"context"`
+	//指定的日志处理机
 	Appenders []LoggerAppender `yaml:"appenders"`
 }
 
 const (
+	//适配定义,控制台方式
 	Adapter_Console = "console"
-	Adapter_File    = "file"
+	//适配定义,文件方式
+	Adapter_File = "file"
 )
 
+//通过flag来指定日志文件路径,没有指定则查找当前目录下./conf/log.yml
 var _loggerConf *string = flag.String("logger", getDefaultLog(), "日志文件路径")
+var default_Config *LoggerConfig = &LoggerConfig{Context: "Default", Appenders: []LoggerAppender{LoggerAppender{Level: LOGGER_DEFAULT_LEVEL, Package_path: "/", Adapter: "console"}}}
 
+//获取默认的日志配置文件,路径为程序当前目录下./conf/log.yml
 func getDefaultLog() string {
 	file, _ := exec.LookPath(os.Args[0])
 	filePath, _ := filepath.Abs(file)
@@ -76,7 +70,7 @@ func loadLoggerConfig(loggerConf string) {
 	conf := parseConfile(loggerConf)
 	if conf == nil || len(conf.Appenders) == 0 {
 		fmt.Println("没有指定配置文件或者日志配置出错,使用默认配置")
-		conf = &LoggerConfig{Context: "Default", Appenders: []LoggerAppender{LoggerAppender{Level: "debug", Package_path: "/", Adapter: "console"}}}
+		conf = default_Config
 	}
 	for _, appender := range conf.Appenders {
 		AddAppender(appender)
@@ -84,6 +78,7 @@ func loadLoggerConfig(loggerConf string) {
 
 }
 
+//解析配置
 func parseConfile(loggerConf string) *LoggerConfig {
 	defer func() {
 		if r := recover(); r != nil {
@@ -103,57 +98,4 @@ func parseConfile(loggerConf string) *LoggerConfig {
 		return conf
 	}
 	return nil
-}
-
-//添加日志配置
-func AddAppender(appender LoggerAppender) {
-	switch appender.Adapter {
-	case Adapter_File:
-		addFileAppender(appender)
-		break
-	case Adapter_Console:
-		addConsoleAppender(appender)
-		break
-	default:
-		fmt.Printf("不能识别的日志适配器:%s", appender.Adapter)
-	}
-}
-
-//添加console的日志配置
-func addConsoleAppender(appender LoggerAppender) {
-	addStdOutFilter(getLevel(appender.Level), appender.Package_path, appender.Timeformat, appender.Format)
-}
-
-//添加文件系统的日志配置
-func addFileAppender(appender LoggerAppender) {
-	rotatePolicy := strings.ToLower(appender.Rotate_policy)
-	switch rotatePolicy {
-	case "time":
-		addFileFilterForTime(getLevel(appender.Level), appender.Package_path, appender.Log_path, time.Minute*time.Duration(appender.Rotate_scope), appender.Rotate, appender.Timeformat, appender.Format)
-		return
-	case "size":
-		addFileFilterForSize(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Rotate_scope*1048576, appender.Rotate, appender.Timeformat, appender.Format)
-		return
-	default:
-		addFileFilterForDefualt(getLevel(appender.Level), appender.Package_path, appender.Log_path, appender.Timeformat, appender.Format)
-		return
-	}
-}
-
-func getLevel(level string) byte {
-	level = strings.ToLower(level)
-	switch level {
-	case "trace":
-		return LOGGER_LEVEL_TRACE
-	case "debug":
-		return LOGGER_LEVEL_DEBUG
-	case "info":
-		return LOGGER_LEVEL_INFO
-	case "warn":
-		return LOGGER_LEVEL_WARN
-	case "error":
-		return LOGGER_LEVEL_ERROR
-	default:
-		return LOGGER_LEVEL_DEBUG
-	}
 }

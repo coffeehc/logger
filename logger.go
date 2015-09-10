@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+//日志格式定义
 const (
 	FORMAT_TIME     = "%T"
 	FORMAT_LEVEL    = "%L"
@@ -19,6 +20,7 @@ const (
 	FORMAT_MESSGAE  = "%M"
 )
 
+//日志接口
 type Logger interface {
 	Trace(format string, v ...interface{}) string
 	Debug(format string, v ...interface{}) string
@@ -27,6 +29,7 @@ type Logger interface {
 	Error(format string, v ...interface{}) string
 }
 
+//获取一个日志对象,主要用于和第三方包做适配
 func GetLogger() Logger {
 	return loggercopy
 }
@@ -63,7 +66,11 @@ const (
 	LOGGER_LEVEL_DEBUG byte = 1<<3 | LOGGER_LEVEL_INFO
 	LOGGER_LEVEL_TRACE byte = 1<<4 | LOGGER_LEVEL_DEBUG
 
-	LOGGER_DEFAULT_BUFSIZE int           = 1024
+	//默认的日志级别
+	LOGGER_DEFAULT_LEVEL = "debug"
+	//日志缓冲区默认大小
+	LOGGER_DEFAULT_BUFSIZE int = 1024
+	//日志缓冲区Flush超时设置
 	LOGGER_DEFAULT_TIMEOUT time.Duration = time.Second * 1
 
 	LOGGER_TIMEFORMAT_SECOND     string = "2006-01-02 15:04:05"
