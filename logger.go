@@ -105,13 +105,14 @@ type Flusher interface {
 
 //日志拦截器定义
 type logFilter struct {
-	level      byte        //拦截级别
-	path       string      //拦截路径
-	timeFormat string      //时间戳格式
-	format     []logFormat //日志格式
-	out        io.Writer
-	cache      chan *logContent
-	stop       chan bool
+	level       byte        //拦截级别
+	path        string      //拦截路径
+	timeFormat  string      //时间戳格式
+	format      []logFormat //日志格式
+	out         io.Writer
+	cache       chan *logContent
+	stop        chan bool
+	filterClose chan bool
 }
 
 //判断是否需要过滤器处理
@@ -122,6 +123,8 @@ func (this *logFilter) canSave(level byte, lineInfo string) bool {
 //过滤器后台输出goruntine
 func (this *logFilter) run() {
 	buf := bytes.NewBuffer(nil)
+	stop := false
+	timeOut := time.Millisecond * 500
 	for {
 		select {
 		case content := <-this.cache:
@@ -145,24 +148,35 @@ func (this *logFilter) run() {
 				buf.WriteTo(this.out)
 			}
 			continue
-		case <-time.After(time.Millisecond * 500):
+		case <-time.After(timeOut):
 			if v, ok := this.out.(Flusher); ok {
 				v.Flush()
 			}
+			if stop {
+				goto CLOSE
+			}
 			continue
-		case <-this.stop:
-			return
+		case stop = <-this.stop:
+			if len(this.cache) == 0 {
+				goto CLOSE
+			}
+			timeOut = time.Millisecond * 100
+			continue
 		}
 	}
+CLOSE:
+	this.filterClose <- true
 }
 
 func (this *logFilter) clear() {
 	this.stop <- true
+	<-this.filterClose
 }
 
 var (
 	filters        []*logFilter
 	evnRootPathLen int
+	isStop         bool = false
 )
 
 //设置对应路径下默认的日志级别,可动态调整日志级别
@@ -222,6 +236,7 @@ func AddFileter(level byte, path string, timeFormat string, format string, out i
 	filter.format = parseFormat(format)
 	filter.cache = make(chan *logContent, 200)
 	filter.stop = make(chan bool, 1)
+	filter.filterClose = make(chan bool)
 	filters = append(filters, filter)
 	go filter.run()
 }
@@ -276,8 +291,20 @@ type logContent struct {
 	content    string
 }
 
+func WaitToClose() {
+	isStop = true
+	for _, filter := range filters {
+		if filter != nil {
+			filter.clear()
+		}
+	}
+}
+
 // real out implement
 func output(logLevel byte, content string, codeLevel int) string {
+	if isStop {
+		return ""
+	}
 	_, file, line, ok := runtime.Caller(codeLevel)
 	var lineInfo string = "-:0"
 	if ok {
