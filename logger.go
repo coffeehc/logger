@@ -61,7 +61,7 @@ func (this _logger) Error(format string, v ...interface{}) string {
 
 var (
 	//默认的日志级别
-	LOGGER_DEFAULT_LEVEL = "debug"
+	LOGGER_DEFAULT_LEVEL = "error"
 	//日志缓冲区默认大小
 	LOGGER_DEFAULT_BUFSIZE int = 1024
 	//日志缓冲区Flush超时设置
@@ -178,19 +178,6 @@ var (
 	evnRootPathLen int
 	isStop         bool = false
 )
-
-//设置对应路径下默认的日志级别,可动态调整日志级别
-func SetDefaultLevel(path string, level byte) {
-	if path == "" {
-		path = "/"
-	}
-	for _, filter := range filters {
-		if filter.path == path {
-			filter.level = level
-			return
-		}
-	}
-}
 
 //启动日志
 func init() {
