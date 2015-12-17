@@ -175,7 +175,6 @@ func (this *logFilter) clear() {
 
 var (
 	filters        []*logFilter
-	evnRootPathLen int
 	isStop         bool = false
 )
 
