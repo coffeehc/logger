@@ -144,7 +144,9 @@ func (this *logFilter) run() {
 					default:
 					}
 				}
-				buf.WriteByte('\n')
+				if content.content[len(content.content)-1] != '\n' {
+					buf.WriteByte('\n')
+				}
 				buf.WriteTo(this.out)
 			}
 			continue
@@ -174,8 +176,8 @@ func (this *logFilter) clear() {
 }
 
 var (
-	filters        []*logFilter
-	isStop         bool = false
+	filters []*logFilter
+	isStop  bool = false
 )
 
 //启动日志
@@ -194,6 +196,12 @@ func ClearFilter() {
 
 //添加日志过滤器,参数说明:级别,包路径,时间格式,Writer接口
 func AddFileter(level byte, path string, timeFormat string, format string, out io.Writer) {
+	filter := newFilter(level, path, timeFormat, format, out)
+	filters = append(filters, filter)
+	go filter.run()
+}
+
+func newFilter(level byte, path string, timeFormat string, format string, out io.Writer) *logFilter {
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
 	}
@@ -203,7 +211,7 @@ func AddFileter(level byte, path string, timeFormat string, format string, out i
 		}
 	}()
 	if path == "" {
-		panic("拦截器拦截路径不能为空")
+		path = "/"
 	}
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
@@ -223,8 +231,7 @@ func AddFileter(level byte, path string, timeFormat string, format string, out i
 	filter.cache = make(chan *logContent, 200)
 	filter.stop = make(chan bool, 1)
 	filter.filterClose = make(chan bool)
-	filters = append(filters, filter)
-	go filter.run()
+	return filter
 }
 
 type logFormat struct {
@@ -289,6 +296,9 @@ func WaitToClose() {
 // real out implement
 func output(logLevel byte, content string, codeLevel int) string {
 	if isStop {
+		return ""
+	}
+	if len(content) == 0 {
 		return ""
 	}
 	_, file, line, ok := runtime.Caller(codeLevel)
