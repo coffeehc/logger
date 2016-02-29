@@ -7,6 +7,15 @@ logger
 go get github.com/coffeehc/logger
 ```
 
+1.0.1 更新日志
+增加了 log.Logger的适配器方法
+使用方式 
+```go
+    CreatLoggerAdapter(level byte, timeFormat string, format string, out io.Writer) *log.Logger
+```
+用于在某些可以注入 log.Logger的地方使用,输出仍然能适配为本项目格式,Writer 同样可以使用内置的FileWrite
+
+=======================
 
 ###使用方式
 coffeehc/logger 是一个基础的日志框架,提供扩展的开放logFilter接口,使用者可以自己定义何种级别的logger发布到对应的io.Writer中
