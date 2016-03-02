@@ -24,7 +24,7 @@ func (this *internalWaiter) Write(p []byte) (n int, err error) {
 	if len(p) == 0 {
 		return 0, nil
 	}
-	_, file, line, ok := runtime.Caller(3)
+	_, file, line, ok := runtime.Caller(4)
 	var lineInfo string = "-:0"
 	if ok {
 		index := strings.Index(file, "/src/") + 4
