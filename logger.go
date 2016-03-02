@@ -122,9 +122,10 @@ func (this *logFilter) canSave(level byte, lineInfo string) bool {
 
 //过滤器后台输出goruntine
 func (this *logFilter) run() {
+	timeOut := time.Millisecond * 500
+	timer := time.NewTimer(timeOut)
 	buf := bytes.NewBuffer(nil)
 	stop := false
-	timeOut := time.Millisecond * 500
 	for {
 		select {
 		case content := <-this.cache:
@@ -138,7 +139,7 @@ func (this *logFilter) run() {
 					case FORMAT_LEVEL:
 						buf.WriteString(getLevelStr(content.level))
 					case FORMAT_CODEINFO:
-						buf.WriteString(content.lineInfo)
+						buf.WriteString(content.lineInfo[1:])
 					case FORMAT_MESSGAE:
 						buf.WriteString(content.content)
 					default:
@@ -150,7 +151,7 @@ func (this *logFilter) run() {
 				buf.WriteTo(this.out)
 			}
 			continue
-		case <-time.After(timeOut):
+		case <-timer.C:
 			if v, ok := this.out.(Flusher); ok {
 				v.Flush()
 			}
@@ -165,6 +166,7 @@ func (this *logFilter) run() {
 			timeOut = time.Millisecond * 100
 			continue
 		}
+		timer.Reset(timeOut)
 	}
 CLOSE:
 	this.filterClose <- true
@@ -205,11 +207,6 @@ func newFilter(level byte, path string, timeFormat string, format string, out io
 	if timeFormat == "" {
 		timeFormat = LOGGER_TIMEFORMAT_SECOND
 	}
-	defer func() {
-		if x := recover(); x != nil {
-			output(LOGGER_LEVEL_ERROR, fmt.Sprint(x), code_Level)
-		}
-	}()
 	if path == "" {
 		path = "/"
 	}
