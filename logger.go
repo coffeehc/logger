@@ -120,35 +120,44 @@ func (this *logFilter) canSave(level byte, lineInfo string) bool {
 	return this.level&level == level && strings.HasPrefix(lineInfo, this.path)
 }
 
+func (this *logFilter) save(buf *bytes.Buffer, content *logContent) {
+	buf.Reset()
+	for _, f := range this.format {
+		buf.Write(f.data)
+		switch f.appendContent {
+		case FORMAT_TIME:
+			buf.WriteString(content.appendTime.Format(this.timeFormat))
+		case FORMAT_LEVEL:
+			buf.WriteString(getLevelStr(content.level))
+		case FORMAT_CODEINFO:
+			buf.WriteString(content.lineInfo[1:])
+		case FORMAT_MESSGAE:
+			buf.WriteString(content.content)
+		default:
+		}
+	}
+	if content.content[len(content.content)-1] != '\n' {
+		buf.WriteByte('\n')
+	}
+	buf.WriteTo(this.out)
+}
+
 //过滤器后台输出goruntine
 func (this *logFilter) run() {
 	timeOut := time.Millisecond * 500
 	timer := time.NewTimer(timeOut)
 	buf := bytes.NewBuffer(nil)
 	stop := false
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("logger error :%s", err)
+		}
+	}()
 	for {
 		select {
 		case content := <-this.cache:
 			if this.canSave(content.level, content.lineInfo) {
-				buf.Reset()
-				for _, f := range this.format {
-					buf.Write(f.data)
-					switch f.appendContent {
-					case FORMAT_TIME:
-						buf.WriteString(content.appendTime.Format(this.timeFormat))
-					case FORMAT_LEVEL:
-						buf.WriteString(getLevelStr(content.level))
-					case FORMAT_CODEINFO:
-						buf.WriteString(content.lineInfo[1:])
-					case FORMAT_MESSGAE:
-						buf.WriteString(content.content)
-					default:
-					}
-				}
-				if content.content[len(content.content)-1] != '\n' {
-					buf.WriteByte('\n')
-				}
-				buf.WriteTo(this.out)
+				this.save(buf, content)
 			}
 			continue
 		case <-timer.C:
@@ -159,7 +168,8 @@ func (this *logFilter) run() {
 				goto CLOSE
 			}
 			continue
-		case stop = <-this.stop:
+		case <-this.stop:
+			stop = true
 			if len(this.cache) == 0 {
 				goto CLOSE
 			}
@@ -169,11 +179,11 @@ func (this *logFilter) run() {
 		timer.Reset(timeOut)
 	}
 CLOSE:
-	this.filterClose <- true
+	close(this.filterClose)
 }
 
 func (this *logFilter) clear() {
-	this.stop <- true
+	close(this.stop)
 	<-this.filterClose
 }
 
@@ -226,7 +236,7 @@ func newFilter(level byte, path string, timeFormat string, format string, out io
 	filter.out = out
 	filter.format = parseFormat(format)
 	filter.cache = make(chan *logContent, 200)
-	filter.stop = make(chan bool, 1)
+	filter.stop = make(chan bool, 10)
 	filter.filterClose = make(chan bool)
 	return filter
 }
