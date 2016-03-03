@@ -18,5 +18,5 @@ func TestBaseLog(t *testing.T) {
 	//}
 	log := logger.CreatLoggerAdapter(logger.LOGGER_LEVEL_ERROR, "", "", os.Stderr)
 	log.Printf("错误:%s", time.Now())
-	time.Sleep(time.Second)
+	//time.Sleep(time.Second)
 }
