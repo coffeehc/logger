@@ -69,7 +69,7 @@ func loadLoggerConfig(loggerConf string) {
 	filters = make([]*logFilter, 0)
 	conf := parseConfile(loggerConf)
 	if conf == nil || len(conf.Appenders) == 0 {
-		fmt.Println("没有指定配置文件或者日志配置出错,使用默认配置")
+		fmt.Println("没有指定配置文件,服务将使用默认配置")
 		conf = default_Config
 	}
 	for _, appender := range conf.Appenders {
