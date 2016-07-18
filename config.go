@@ -22,7 +22,6 @@ package logger
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -50,7 +49,7 @@ const (
 
 //通过flag来指定日志文件路径,没有指定则查找当前目录下./conf/log.yml
 var _loggerConf *string = flag.String("logger", getDefaultLog(), "日志文件路径")
-var default_Config *LoggerConfig = &LoggerConfig{Context: "Default", Appenders: []LoggerAppender{LoggerAppender{Level: LOGGER_DEFAULT_LEVEL, Package_path: "/", Adapter: "console"}}}
+var default_Config *LoggerConfig = &LoggerConfig{Context: "Default", Appenders: []LoggerAppender{{Level: LOGGER_DEFAULT_LEVEL, Package_path: "/", Adapter: "console"}}}
 
 //获取默认的日志配置文件,路径为程序当前目录下./conf/log.yml
 func getDefaultLog() string {
@@ -69,7 +68,7 @@ func loadLoggerConfig(loggerConf string) {
 	filters = make([]*logFilter, 0)
 	conf := parseConfile(loggerConf)
 	if conf == nil || len(conf.Appenders) == 0 {
-		fmt.Println("没有指定配置文件,服务将使用默认配置")
+		//fmt.Println("没有指定配置文件,服务将使用默认配置")
 		conf = default_Config
 	}
 	for _, appender := range conf.Appenders {
