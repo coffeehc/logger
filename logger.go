@@ -78,7 +78,7 @@ const (
 	LOGGER_TIMEFORMAT_SECOND     string = "2006-01-02 15:04:05"
 	LOGGER_TIMEFORMAT_NANOSECOND string = "2006-01-02 15:04:05.999999999"
 	LOGGER_TIMEFORMAT_ALL        string = "2006-01-02 15:04:05.999999999 -0700 UTC"
-	code_Level                   int    = 2
+	LOGGER_CODE_DEPTH            int    = 2
 )
 
 func getLevelStr(level byte) string {
@@ -159,7 +159,6 @@ func (this *logFilter) run() {
 			if this.canSave(content.level, content.lineInfo) {
 				this.save(buf, content)
 			}
-			continue
 		case <-timer.C:
 			if v, ok := this.out.(Flusher); ok {
 				v.Flush()
@@ -167,14 +166,12 @@ func (this *logFilter) run() {
 			if stop {
 				goto CLOSE
 			}
-			continue
 		case <-this.stop:
 			stop = true
 			if len(this.cache) == 0 {
 				goto CLOSE
 			}
 			timeOut = time.Millisecond * 100
-			continue
 		}
 		timer.Reset(timeOut)
 	}
@@ -323,27 +320,31 @@ func output(logLevel byte, content string, codeLevel int) string {
 	return content
 }
 
+func Printf(logLevel byte, codeLevel int, format string, v ...interface{}) string {
+	return output(logLevel, fmt.Sprintf(format, v...), codeLevel)
+}
+
 //print trace log
 func Trace(format string, v ...interface{}) string {
-	return output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...), code_Level)
+	return output(LOGGER_LEVEL_TRACE, fmt.Sprintf(format, v...), LOGGER_CODE_DEPTH)
 }
 
 //print debug log
 func Debug(format string, v ...interface{}) string {
-	return output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...), code_Level)
+	return output(LOGGER_LEVEL_DEBUG, fmt.Sprintf(format, v...), LOGGER_CODE_DEPTH)
 }
 
 //print Info log
 func Info(format string, v ...interface{}) string {
-	return output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...), code_Level)
+	return output(LOGGER_LEVEL_INFO, fmt.Sprintf(format, v...), LOGGER_CODE_DEPTH)
 }
 
 //print Warn log
 func Warn(format string, v ...interface{}) string {
-	return output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...), code_Level)
+	return output(LOGGER_LEVEL_WARN, fmt.Sprintf(format, v...), LOGGER_CODE_DEPTH)
 }
 
 // print Error log
 func Error(format string, v ...interface{}) string {
-	return output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), code_Level)
+	return output(LOGGER_LEVEL_ERROR, fmt.Sprintf(format, v...), LOGGER_CODE_DEPTH)
 }
