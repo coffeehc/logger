@@ -1,13 +1,13 @@
 {
-  "comment": "",
-  "ignore": "test",
-  "package": [
-    {
-      "checksumSHA1": "SPMXWeoFQa5z0pLPmqpcFzyHqQQ=",
-      "path": "gopkg.in/yaml.v2",
-      "revision": "31c299268d302dd0aa9a0dcf765a3d58971ac83f",
-      "revisionTime": "2016-09-12T16:56:03Z"
-    }
-  ],
-  "rootPath": "github.com/coffeehc/logger"
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "12GqsW8PiRPnezDDy0v4brZrndM=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "a5b47d31c556af34a302ce5d659e6fea44d90de0",
+			"revisionTime": "2016-09-28T15:37:09Z"
+		}
+	],
+	"rootPath": "github.com/coffeehc/logger"
 }

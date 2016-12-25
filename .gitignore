@@ -1,5 +1,7 @@
 
 .idea
+.vscode
+.history
 *.iml
 out
 gen
