@@ -15,7 +15,7 @@ func TestBaseLog(t *testing.T) {
 	//for a := 0; a < 10000; a++ {
 	//	Debug("test,time is %s ====%d", time.Now(), a)
 	//}
-	log := logger.CreatLoggerAdapter(logger.LoggerLevelError, "", "", os.Stderr)
+	log := logger.CreatLoggerAdapter(logger.LevelError, "", "", os.Stderr)
 	log.Printf("错误:%s", time.Now())
 	//time.Sleep(time.Second)
 }
