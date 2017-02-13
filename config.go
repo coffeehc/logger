@@ -24,10 +24,6 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
@@ -47,8 +43,8 @@ const (
 	AdapterFile = "file"
 )
 
-//通过flag来指定日志文件路径,没有指定则查找当前目录下./conf/log.yml
-var _loggerConf = flag.String("logger_config", getDefaultLog(), "日志文件路径")
+//通过flag来指定日志文件路径,没有指定则查找当前目录下./log.yml
+var _loggerConf = flag.String("logger_config", "./log.yml", "日志文件路径")
 var defaultConfig = &Config{
 	Context: "Default",
 	Appenders: []*Appender{
@@ -58,13 +54,6 @@ var defaultConfig = &Config{
 			Adapter:     AdapterConsole,
 		},
 	},
-}
-
-//获取默认的日志配置文件,路径为程序当前目录下./conf/log.yml
-func getDefaultLog() string {
-	file, _ := exec.LookPath(os.Args[0])
-	filePath, _ := filepath.Abs(file)
-	return path.Join(filepath.Dir(filePath), "conf/log.yml")
 }
 
 //加载日志配置,如果指定了-loggerConf参数,则加载这个参数指定的配置文件,如果没有则使用默认的配置
