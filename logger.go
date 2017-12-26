@@ -319,7 +319,10 @@ func output(logLevel Level, content string, codeLevel int) string {
 	_, file, line, ok := runtime.Caller(codeLevel)
 	lineInfo := "-:0"
 	if ok {
-		index := strings.Index(file, "/src/") + 4
+		index := strings.Index(file, "/vendor/") + 7
+		if index <7{
+			index = strings.Index(file, "/src/") + 4
+		}
 		lineInfo = file[index:] + ":" + strconv.Itoa(line)
 	}
 	log := &logContent{time.Now(), logLevel, lineInfo, content}
